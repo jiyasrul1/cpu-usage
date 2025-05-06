@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>System Load Monitor</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 40px;
+      margin-top: 20px;
+    }
+    .gauge-container {
+      position: relative;
+      width: 200px;
+      height: 200px;
+    }
+    svg { transform: rotate(-90deg); }
+    .gauge-ring {
+      stroke: #333;
+      stroke-width: 15;
+      fill: none;
+    }
+    .gauge-progress {
+      stroke: #0f0;
+      stroke-width: 15;
+      stroke-linecap: round;
+      fill: none;
+      transition: stroke-dashoffset 0.5s;
+    }
+    .gauge-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5rem;
+      text-align: center;
+    }
+    .label {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+    .network-meter {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      width: 400px;
+      padding: 15px;
+      background: #222;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      box-shadow: 0 0 10px #000a;
+    }
+    .meter-label {
+      font-weight: bold;
+      color: #0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="network-meter">
+    <div><span class="meter-label">Download:</span> <span id="dl">0.00</span> Mbps</div>
+    <div><span class="meter-label">Upload:</span> <span id="ul">0.00</span> Mbps</div>
+  </div>
+
+  <div class="dashboard">
+    <!-- CPU Gauge -->
+    <div>
+      <div class="gauge-container">
+        <svg width="200" height="200">
+          <circle class="gauge-ring" cx="100" cy="100" r="90" />
+          <circle class="gauge-progress cpu-progress" cx="100" cy="100" r="90" />
+        </svg>
+        <div class="gauge-text cpu-text">0%</div>
+      </div>
+      <div class="label">CPU Cores: <span id="cpu-cores">--</span></div>
+    </div>
+
+    <!-- RAM Gauge -->
+    <div>
+      <div class="gauge-container">
+        <svg width="200" height="200">
+          <circle class="gauge-ring" cx="100" cy="100" r="90" />
+          <circle class="gauge-progress ram-progress" cx="100" cy="100" r="90" />
+        </svg>
+        <div class="gauge-text ram-text">0%</div>
+      </div>
+      <div class="label">
+        RAM: <span id="ram-used">--</span> / <span id="total-ram">--</span> GB
+      </div>
+    </div>
+
+    <!-- Storage Gauge -->
+    <div>
+      <div class="gauge-container">
+        <svg width="200" height="200">
+          <circle class="gauge-ring" cx="100" cy="100" r="90" />
+          <circle class="gauge-progress disk-progress" cx="100" cy="100" r="90" />
+        </svg>
+        <div class="gauge-text disk-text">0%</div>
+      </div>
+      <div class="label">
+        Storage: <span id="disk-used">--</span> / <span id="total-disk">--</span> GB
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    function setupGauge(elProgress, elText) {
+      const radius = 90;
+      const circumference = 2 * Math.PI * radius;
+      elProgress.style.strokeDasharray = circumference;
+      elProgress.style.strokeDashoffset = circumference;
+      return percent => {
+        const offset = circumference - (percent / 100) * circumference;
+        elProgress.style.strokeDashoffset = offset;
+        elText.textContent = `${percent.toFixed(0)}%`;
+      };
+    }
+
+    const setCpu = setupGauge(
+      document.querySelector('.cpu-progress'),
+      document.querySelector('.cpu-text')
+    );
+    const setRam = setupGauge(
+      document.querySelector('.ram-progress'),
+      document.querySelector('.ram-text')
+    );
+    const setDisk = setupGauge(
+      document.querySelector('.disk-progress'),
+      document.querySelector('.disk-text')
+    );
+
+    socket.on('system-info', info => {
+      document.getElementById('cpu-cores').textContent = info.cores;
+      document.getElementById('total-ram').textContent = info.totalMem;
+      document.getElementById('total-disk').textContent = info.totalStorage;
+    });
+
+    socket.on('metrics', data => {
+      setCpu(parseFloat(data.cpuLoad));
+      setRam(parseFloat(data.memUsedPercent));
+      setDisk(parseFloat(data.diskUsedPercent));
+
+      document.getElementById('ram-used').textContent = data.memUsedGB;
+      document.getElementById('disk-used').textContent = data.diskUsedGB;
+
+      document.getElementById('dl').textContent = data.downloadSpeed;
+      document.getElementById('ul').textContent = data.uploadSpeed;
+    });
+  </script>
+</body>
+</html>

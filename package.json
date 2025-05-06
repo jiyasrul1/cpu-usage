@@ -1,0 +1,17 @@
+{
+  "name": "cpu-usage",
+  "version": "1.0.0",
+  "description": "This is  the web based vps cpu usage and load calculator",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1",
+    "systeminformation": "^5.25.11"
+  }
+}
